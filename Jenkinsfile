@@ -4,14 +4,14 @@ pipeline {
     environment {
         IMAGE_NAME = 'calculatorapp'
         TAG = 'latest'
-        CONTAINER_NAME = 'calculatorapp-container'
-        DOCKERHUB_CREDENTIALS_ID = 'docker-credentials' 
+        DOCKERHUB_USERNAME = 'ishhod08'
+        FULL_IMAGE_NAME = "${DOCKERHUB_USERNAME}/${IMAGE_NAME}"
+        DOCKERHUB_CREDENTIALS_ID = 'docker-credentials'
     }
 
     stages {
         stage('Checkout from GitHub') {
             steps {
-                echo "🔄 Checking out source code from GitHub..."
                 git branch: 'main',
                     url: 'https://github.com/Justinino1/CalculatorApp.git'
             }
@@ -20,8 +20,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    echo "🐳 Building Docker image ${IMAGE_NAME}:${TAG}..."
-                    docker.build("${IMAGE_NAME}:${TAG}")
+                    echo "🐳 Building Docker image ${FULL_IMAGE_NAME}:${TAG}..."
+                    docker.build("${FULL_IMAGE_NAME}:${TAG}")
                 }
             }
         }
@@ -29,9 +29,19 @@ pipeline {
         stage('Test Application') {
             steps {
                 script {
-                    echo "🧪 Running Django tests inside Docker image..."
-                    docker.image("${IMAGE_NAME}:${TAG}").inside {
+                    docker.image("${FULL_IMAGE_NAME}:${TAG}").inside {
                         sh 'python manage.py test'
+                    }
+                }
+            }
+        }
+
+        stage('Push to DockerHub') {
+            steps {
+                echo "📤 Pushing image to DockerHub..."
+                withDockerRegistry(credentialsId: "${DOCKERHUB_CREDENTIALS_ID}", url: '') {
+                    script {
+                        docker.image("${FULL_IMAGE_NAME}:${TAG}").push()
                     }
                 }
             }
@@ -40,46 +50,28 @@ pipeline {
         stage('Run Container') {
             steps {
                 script {
-                    echo "📦 Deploying Docker container..."
+                    echo "🛑 Stopping existing container (if any)..."
+                    sh "docker stop calculatorapp-container || true"
 
-                    sh '''
-                        echo "🛑 Stopping existing container (if any)..."
-                        docker stop ${CONTAINER_NAME} || true
+                    echo "🗑️ Removing old container (if any)..."
+                    sh "docker rm calculatorapp-container || true"
 
-                        echo "🗑️ Removing old container (if any)..."
-                        docker rm ${CONTAINER_NAME} || true
-
-                        echo "🚀 Starting new container..."
-                        docker run -d -p 8000:8000 --name ${CONTAINER_NAME} ${IMAGE_NAME}:${TAG}
-                    '''
+                    echo "🚀 Starting new container..."
+                    sh "docker run -d -p 8000:8000 --name calculatorapp-container ${FULL_IMAGE_NAME}:${TAG}"
                 }
             }
         }
-
-        /*
-        stage('Push to DockerHub') {
-            steps {
-                echo "📤 Pushing image to DockerHub..."
-                withDockerRegistry(credentialsId: "${DOCKERHUB_CREDENTIALS_ID}", url: '') {
-                    script {
-                        docker.image("${IMAGE_NAME}:${TAG}").push()
-                    }
-                }
-            }
-        }
-        */
     }
 
     post {
+        always {
+            cleanWs()
+        }
         success {
-            echo '✅ Deployment completed successfully!'
+            echo '✅ Deployment Successful!'
         }
         failure {
-            echo '❌ Deployment failed. Please check logs.'
-        }
-        always {
-            echo '🧹 Cleaning up workspace...'
-            cleanWs()
+            echo '❌ Deployment Failed.'
         }
     }
 }
