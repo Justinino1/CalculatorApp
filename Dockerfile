@@ -1,25 +1,25 @@
-# Use an official Python runtime as a parent image
+# Use the official Python image as the base
 FROM python:3.10-slim
 
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Set work directory
+# Set the working directory in the container
 WORKDIR /app
 
-# Install dependencies
+# Copy the requirements file into the container
 COPY requirements.txt /app/
-RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# Copy project files
+# Install dependencies
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
+
+# Copy the rest of the application code into the container
 COPY . /app/
 
-# Collect static files
-RUN python manage.py collectstatic --noinput
-
-# Expose the port
+# Expose the port the app runs on
 EXPOSE 8000
 
-# Start server
+# Define the default command to run the application
 CMD ["gunicorn", "CalculatorApp.wsgi:application", "--bind", "0.0.0.0:8000"]
