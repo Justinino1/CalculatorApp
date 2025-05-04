@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('Clone') {
             steps {
-                git 'https://github.com/Justinino1/CalculatorApp.git'
+                git branch: 'main', url:'https://github.com/Justinino1/CalculatorApp.git'
             }
         }
 
