@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = 'calculatorapp:latest'
-        DOCKER CREDENTIALS = 'docker-credentials'
+        DOCKER_CREDENTIALS = 'docker-credentials'
     }
 
     stages {
